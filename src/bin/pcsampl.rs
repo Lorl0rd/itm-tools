@@ -15,6 +15,7 @@ use xmas_elf::{
     symbol_table::{Entry, Type},
     ElfFile,
 };
+use cpp_demangle::Symbol;
 
 fn main() -> Result<(), ExitFailure> {
     run().map_err(|e| e.into())
@@ -109,8 +110,8 @@ fn run() -> Result<(), failure::Error> {
                 total -= 1;
                 continue;
             }
-
-            *stats.entry(hit.name).or_insert(0) += 1;
+            let demangled_name=demangle_symbol(hit.name);
+            *stats.entry(demangled_name).or_insert(0) += 1;
         } else {
             sleep += 1;
         }
@@ -128,7 +129,7 @@ fn run() -> Result<(), failure::Error> {
         println!(
             "{:5.02} {}",
             pct(entry.1),
-            rustc_demangle::demangle(entry.0).to_string(),
+            entry.0,
         );
     }
 
@@ -160,4 +161,11 @@ impl<'a> PartialEq for Routine<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.address == other.address
     }
+}
+
+fn demangle_symbol(symbol: &str) -> String {
+    if let Ok(demangled) = Symbol::new(symbol) {
+        return demangled.to_string();
+    }
+    symbol.to_string()
 }
